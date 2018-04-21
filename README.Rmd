@@ -4,9 +4,6 @@ output: github_document
 ---
 
 
-# 0) Setup
-
-Libraries, kntir and pandoc options, and data import.
 
 ```{r setup}
 knitr::opts_chunk$set(
@@ -14,7 +11,13 @@ knitr::opts_chunk$set(
 	message = FALSE,
 	warning = FALSE
 )
+```
 
+# 0) Setup
+
+Libraries and data import.
+
+```{r}
 # libraries:
 suppressPackageStartupMessages(
   library(tidyverse)
