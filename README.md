@@ -9,8 +9,8 @@ knitr::opts_chunk$set(
 )
 ```
 
-0) Setup
-========
+Setup
+=====
 
 Libraries and data import.
 
