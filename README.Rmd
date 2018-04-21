@@ -12,38 +12,37 @@ Either:
 1) Encourage the fund to invest in this component manufacteruer
 2) Highlight risks and steet company away
 
-## Questions:
+## Initial questions:
 
 - What are potential risks that would steer company away?
-    - Customer attrition?
-    - Very few customers making up large percentage of purchases (i.e., fragile)
-    -
+- Customer attrition?
+- Very few customers making up large percentage of purchases (i.e., fragile)
 
 
 - Potential Upside?
-    - Is there significant $ headroom?
-      - Reduce Costs?
-        - Is there an optimization solution here in terms of cost of sales?
-      - Increase Revenues?
-        - Unique characteristics include: components supplied are mission-critical and much cheaper than the final product which is assembled and sold by the customer. 
-        - Why are the components priced so low compared to the final products?
-        - Price driven down by competition rather than margins?
-        - Key player in industry, many times larger than competitors. Customers are locked-in by regulations, highly specialized products. 
-        - Increase cross-selling? 
-      
+- Is there significant $ headroom?
+- Reduce Costs?
+- Is there an optimization solution here in terms of cost of sales?
+- Increase Revenues?
+- Unique characteristics include: components supplied are mission-critical and much cheaper than the final product which is assembled and sold by the customer. 
+- Why are the components priced so low compared to the final products?
+- Price driven down by competition rather than margins?
+- Key player in industry, many times larger than competitors. Customers are locked-in by regulations, highly specialized products. 
+- Increase cross-selling? 
+
 
 ## Key Questions (from document)
 
 1) Are there distinct customer segments, separate from the end market classifications that have been assigned by the management team?
 2) Inform how we should be thinking about any of the following potential value creation drivers:
-    - driving profit by increasing pricing
-    - consolidating plant footprint
-    - improving how the company purchases raw materials
-    - etc.?
+- driving profit by increasing pricing
+- consolidating plant footprint
+- improving how the company purchases raw materials
+- etc.?
 3) If the data raises additional questions or there are additional opportunities for insight, but you would require 
-  1) additional company data
-  2) external third‐party data, or 
-  3) a conversation with management
+    - additional company data
+    - external third‐party data, or 
+    - a conversation with management
 
 please highlight your proposed analyses, their objectives, how they can help influence our decision‐making, and how you would execute them. 
 
@@ -59,9 +58,9 @@ Document options:
 
 ```{r setup}
 knitr::opts_chunk$set(
-	echo = TRUE,
-	message = FALSE,
-	warning = FALSE
+  echo = TRUE,
+  message = FALSE,
+  warning = FALSE
 )
 ```
 
@@ -71,10 +70,12 @@ Libraries and data import.
 
 ```{r}
 # libraries:
-suppressPackageStartupMessages(
+suppressPackageStartupMessages({
   library(tidyverse)
-)
-
+  library(cluster)
+  
+  source("~/toClip.R") # quickly send data to clipboard on mac
+})
 ```
 
 Load the data
@@ -149,6 +150,13 @@ nrow(trxs_joined)==nrow(trxs_clean)
 summary(glimpse(trxs_joined))
 ```
 
+
+Unique ID is Customer, Part, Order, fiscalyearMonth:
+```{r}
+trxs_joined %>% group_by(Customer, Part, Order, fiscalyearMonth) %>% count() %>% group_by(n) %>% count()
+```
+
+
 ## EDA of customer profile
 
 The amount of transations per customer is skewed. a handful of cusotmers have upwards of 4K transactions. Median number of transactions is 4 over a 3 year period (2015-2017). 
@@ -181,7 +189,496 @@ trxs_joined %>%
   geom_histogram()
 ```
 
-## Creating a customer-profile and clustering
+## Creating a customer-level-profile and clustering
+
+What are the dimensions we are interested in?
+- Revenues (Qty*Sales)
+- Cost of goods sold
+- How many returns are we making? (Negative sales)
+- Net Sales (Revenues - COGS)
+- Total Volume
+- Seasonality?
+- Different number of parts?
+- Multiple Parts per Order?
+- Order growth QoQ?
+
+```{r}
+trxs_features <- trxs_joined %>% 
+  mutate(Revenue = Sales*`Quantity, units`
+         , COGS = `Part cost, $`*`Quantity, units`
+         , Count_of_Returns = ifelse(Revenue<0, 1, 0)
+         , Total_Returns = ifelse(Revenue<0, Revenue, 0)
+         , Profit = Revenue-COGS
+  ) %>% 
+  group_by(Customer) %>% 
+  mutate(Count_of_trxs = n()) %>% 
+  ungroup()
+
+trxs_seasonal <- trxs_joined %>% 
+  mutate(FiscalMonth = substr(fiscalyearMonth,5,6)
+         , FiscalDate = as.Date(paste0(FiscalYear,"-",FiscalMonth,"-01"), format = "%Y-%m-%d")
+         , FiscalQuarter = lubridate::quarter(FiscalDate)
+         , YearQuarter = as.numeric(paste0(FiscalYear, sprintf("%02.0f",FiscalQuarter)))
+  ) %>% 
+  select(YearQuarter, FiscalQuarter, Customer, Part, Order, fiscalyearMonth)
+
+trxs_features <- trxs_features %>% left_join(trxs_seasonal, by = c("fiscalyearMonth", "Customer", "Part", "Order"))
+
+glimpse(trxs_features)
+
+```
+
+```{r}
+
+# ensures that all quarters a represented (for YoY calculation)
+all_quarters <- data_frame(FiscalQuarter = 1:4)
+
+lag_1_year <- function(x) lag(x,4)
+
+# function computes YoY
+Quarterly_YoY <- function(x) {
+  y <- (x - lag(x,4))
+}
+
+Percent_YoY <- function(x) {
+  y <- x/lag(x,4)
+}
+
+# makes naming and mutli-mutating easier
+identity <- function(x) x
+
+# replace NAs and NaNs with 0's if need be
+replace_na <- function(x) ifelse(is.na(x), 0, x)
+replace_inf <- function(x) ifelse(is.infinite(x), 0, x)
+
+customer_quarterly_averages <- trxs_features %>% 
+  arrange(Customer) %>% 
+  #filter(Customer %in% c("Customer 1", "Customer 2")) %>% 
+  group_by(Customer, YearQuarter, FiscalQuarter) %>% 
+  summarise(Quarterly_Volume = sum(`Quantity, units`, na.rm = T)
+            , Quarterly_Revenue = sum(Revenue, na.rm = T)
+            , Quarterly_Profit = sum(Profit, na.rm = T)
+            , Quarterly_COGS = sum(COGS, na.rm = T)
+            , Quarterly_count_of_trxs = n()
+            , Quarterly_returns = sum(Total_Returns, na.rm = T)
+  ) %>% 
+  full_join(all_quarters, by = "FiscalQuarter") %>% 
+  ungroup() %>% 
+  group_by(Customer) %>% 
+  arrange(YearQuarter, FiscalQuarter) %>% 
+  mutate_at(vars(Quarterly_Volume:Quarterly_returns), funs(lag_1_year, identity)) %>% 
+  
+  mutate(Quarterly_Volume_yoy = Quarterly_Volume - Quarterly_Volume_lag_1_year
+         , Quarterly_Revenue_yoy = Quarterly_Revenue - Quarterly_Revenue_lag_1_year
+         , Quarterly_Profit_yoy = Quarterly_Profit - Quarterly_Profit_lag_1_year
+         , Quarterly_COGS_yoy = Quarterly_COGS - Quarterly_COGS_lag_1_year
+         , Quarterly_count_of_trxs_yoy = Quarterly_count_of_trxs - Quarterly_count_of_trxs_lag_1_year
+         , Quarterly_returns_yoy = Quarterly_returns - Quarterly_returns_lag_1_year) %>% 
+  
+  mutate(Quarterly_Volume_yoy = Quarterly_Volume_yoy/Quarterly_Volume_lag_1_year
+         , Quarterly_Revenue_yoy = Quarterly_Revenue_yoy/Quarterly_Revenue_lag_1_year
+         , Quarterly_Profit_yoy = Quarterly_Profit_yoy/Quarterly_Profit_lag_1_year
+         , Quarterly_COGS_yoy = Quarterly_COGS_yoy/Quarterly_COGS_lag_1_year
+         , Quarterly_count_of_trxs_yoy = Quarterly_count_of_trxs_yoy/Quarterly_count_of_trxs_lag_1_year
+         , Quarterly_returns_yoy = Quarterly_returns_yoy/Quarterly_returns_lag_1_year) %>% 
+  select(-contains("identity"),-contains("lag_1_year")) %>% 
+  rowwise() %>% 
+  mutate_at(vars(Quarterly_Volume:Quarterly_returns_yoy), function(x) ifelse(is.nan(x),NA,x)) %>% 
+  ungroup() %>% 
+  group_by(Customer) %>% 
+  summarise_at(vars(Quarterly_Volume:Quarterly_returns_yoy), funs(mean), na.rm = T) %>% 
+  mutate_at(vars(Quarterly_Volume:Quarterly_returns_yoy), function(x) ifelse(is.nan(x),NA,x))
+
+
+# what percent volume each quarter?
+quarterly_buying_habits <- trxs_features %>% 
+  group_by(Customer, FiscalYear, FiscalQuarter) %>% 
+  summarise(total_quarterly_volume = sum(`Quantity, units`, na.rm = T)) %>% 
+  ungroup() %>% 
+  group_by(Customer, FiscalQuarter) %>% 
+  summarise(Average_quarterly_volume = mean(total_quarterly_volume, na.rm = T)
+            , total_quarterly_volume = sum(total_quarterly_volume, na.rm = T)) %>% 
+  mutate(total_volume = sum(total_quarterly_volume, na.rm = T)) %>% 
+  mutate(Percent_Sold_In_Quarter = total_quarterly_volume/total_volume) %>% 
+  select(Customer, FiscalQuarter, Percent_Sold_In_Quarter) %>% 
+  spread(FiscalQuarter, Percent_Sold_In_Quarter) %>% 
+  mutate_all(funs(replace_na))
+
+names(quarterly_buying_habits) <- c("Customer", "Percent Q1", "Percent Q2", "Percent Q3", "Percent Q4", "Not")
+quarterly_buying_habits <- quarterly_buying_habits %>% select(-Not)
+
+# join all customer level data
+cluster_data <- left_join(customer_quarterly_averages,  quarterly_buying_habits, by = "Customer")
+
+```
+
+
+## Choosing the best clustering parameters
+
+Normalize data
+```{r}
+data_for_scaling <- cluster_data %>% ungroup() %>% mutate_if(is.numeric,funs(replace_na)) %>% mutate_if(is.numeric, replace_inf)
+scaled_data <-  data_for_scaling %>% mutate_at(vars(Quarterly_Volume:`Percent Q4`), scale) %>% select_at(vars(Quarterly_Volume:`Percent Q4`))
+```
+
+# data is too large to do hierarchical clustering quickly. Trying k-centroids instead
+
+Optimal number clusters? Using the elbow method, we find that around 8 clusters is optimal. 
+
+```{r}
+library(flexclust)
+fc_cont <- new("flexclustControl")
+fc_cont@tolerance <- 0.1
+fc_cont@iter.max <- 30
+fc_cont@verbose <- 0
+fc_family <- "kmeans"
+num_clusters <- 3
+
+# for loop to determine best K
+kmin <- 2
+kmax <- 20
+plot_sse <- data_frame()
+
+for(i in kmin:kmax){
+  try_group <- i
+  number_clusters <- i
+  print(paste0("trying ", i, " clusters"))
+  
+  
+  set.seed(2018)
+  cluster_data_test <- sample_frac(scaled_data, 0.2)
+  
+  clustered <- kcca(cluster_data_test
+                    , k = number_clusters
+                    , save.data = TRUE
+                    , control = fc_cont
+                    , family = kccaFamily(fc_family))
+  
+  cluster_data_test$cluster <- clustered@cluster
+  
+  group_means <- 
+    cluster_data_test %>% 
+    group_by(cluster) %>% 
+    summarise_if(is.numeric,funs(mean), na.rm = T) %>% 
+    gather(Var, Y_Bar, -cluster)
+  
+  SSE <- 
+    cluster_data_test %>% 
+    gather(Var, Y_actual, -cluster) %>% 
+    left_join(group_means) %>% 
+    mutate(Error = Y_actual - Y_Bar) %>% 
+    summarise(SSE = sum(sqrt(Error^2), na.rm = T)) %>% 
+    as.numeric()
+  plot_sse <- bind_rows(plot_sse, data_frame(clusters = as.numeric(number_clusters), SSE = SSE))
+}
+
+
+plot_sse %>% 
+  ggplot()+
+  aes(x = clusters, y = SSE)+
+  geom_line()+
+  theme_bw()+
+  labs(title = "SSE of kmeans")+
+  geom_vline(xintercept = 8, col = "red")+
+  scale_x_continuous(breaks = 2:20)
+
+```
+
+What family to use? Minimal within-cluster distance is best. Based on within-cluster criteria, kmedians is best choice. 
+
+```{r}
+
+fc_cont <- new("flexclustControl")
+fc_cont@tolerance <- 0.1
+fc_cont@iter.max <- 50
+fc_cont@verbose <- 0
+
+num_clusters <- 8
+
+set.seed(2018)
+cluster_data_test <- sample_frac(scaled_data, 0.2)
+
+set.seed(2018)
+test_ngas <- cclust(cluster_data_test
+                    , k = num_clusters
+                    , method="neuralgas"
+                    , save.data=TRUE
+)
+
+test_kmeans <- cclust(cluster_data_test
+                      , k = num_clusters
+                      , method="kmeans"
+                      , save.data=TRUE
+)
+
+test_kmedians <- kcca(cluster_data_test
+                      , k = number_clusters
+                      , save.data = TRUE
+                      , control = fc_cont
+                      , family = kccaFamily("kmedians")
+)
+
+
+```
+
+```{r}
+summary(test_ngas)
+```
+
+```{r}
+summary(test_kmeans)
+```
+
+
+```{r}
+summary(test_kmedians)
+```
+
+## Using KMEDIANS and K=8 to cluster
+```{r}
+fc_cont <- new("flexclustControl")
+fc_cont@tolerance <- 0.1
+fc_cont@iter.max <- 50
+fc_cont@verbose <- 0
+
+num_clusters <- 8
+
+set.seed(2018)
+kmedians_clustering <- kcca(scaled_data
+                          , k = num_clusters
+                          , save.data = TRUE
+                          , control = fc_cont
+                          , family = kccaFamily("kmedians")
+)
+
+```
+
+```{r}
+cluster_data_groups <- bind_cols(data_for_scaling , data_frame(clusters = kmedians_clustering@cluster))
+
+cluster_data_groups %>% 
+  group_by(clusters) %>% 
+  count()
+```
+
+
+```{r fig.height=10, fig.width=15}
+
+cluster_data_groups %>% 
+  group_by(clusters) %>% 
+  summarise_if(is.numeric, funs(mean),na.rm = T) %>% 
+  mutate_at(vars(Quarterly_Volume:`Percent Q4`), funs(scale)) %>% 
+  #select(-YearQuarter, -FiscalQuarter) %>% 
+  gather(Var, Value, -clusters) %>% 
+  ggplot+
+  aes(x = Var, y = Value, fill = Value)+
+  geom_col()+
+  geom_hline(yintercept = 0)+
+  coord_flip()+
+  facet_wrap(~clusters, nrow = 1)+
+  theme_bw()+
+  labs(title = "Scaled values by cluster group"
+       , y = NULL
+       , x = NULL 
+       , fill = "Normalized average")
+
+```
+
+
+
+```{r}
+market_order <- 
+c("Market 1","Market 2"
+,"Market 3","Market 4"
+,"Market 5","Market 6"
+,"Market 7","Market 8"
+,"Market 9","Market 10"
+,"Market 11","Market 12"
+,"Market 13","Market 14"
+,"Market 15")
+
+cluster_data_groups %>% 
+  left_join(customers, by = "Customer") %>% 
+  filter(!is.na(`End market`)) %>% 
+  mutate(`End market` =   factor(`End market`, levels = market_order)) %>% 
+  group_by(`End market`) %>% 
+  count()
+```
+
+
+```{r fig.height=10, fig.width=15}
+cluster_data_groups %>% 
+  left_join(customers, by = "Customer") %>% 
+  filter(!is.na(`End market`)) %>% 
+  mutate(`End market` =   factor(`End market`, levels = market_order)) %>% 
+  group_by(`End market`) %>% 
+  summarise_if(is.numeric, funs(mean),na.rm = T) %>% 
+  mutate_at(vars(Quarterly_Volume:`Percent Q4`), funs(scale)) %>% 
+  select(-clusters) %>% 
+  gather(Var, Value, -`End market`) %>% 
+  ggplot+
+  aes(x = Var, y = Value, fill = Value)+
+  geom_col()+
+  geom_hline(yintercept = 0)+
+  coord_flip()+
+  facet_wrap(~`End market`, nrow = 1)+
+  theme_bw()+
+  labs(title = "Scaled values by End Market group"
+       , y = NULL
+       , x = NULL 
+       , fill = "Normalized average")
+```
+
+
+
+## Examine original groups. Calculate potential headroom
+
+If you can move X% of customers to cluster mean, net profit would be Y.
+
+```{r}
+cluster_mean <- function(x) mean(x, na.rm = T)
+cluster_identity <- function(x) sum(x, na.rm = T)
+cluster_averages <- cluster_data_groups %>% 
+  group_by(clusters) %>% 
+  summarise_at(vars(Quarterly_Volume:`Percent Q4`), funs(cluster_mean, cluster_identity)) %>% 
+  select(-contains("_identity"))
+  
+```
+
+```{r}
+cluster_compare <- left_join(cluster_data_groups, cluster_averages, by = "clusters")
+glimpse(cluster_compare)
+```
+
+
+```{r}
+cluster_delta <- cluster_compare %>% 
+  mutate(Quarterly_Volume_delta = Quarterly_Volume - Quarterly_Volume_cluster_mean
+         , Quarterly_Revenue_delta = Quarterly_Revenue - Quarterly_Revenue_cluster_mean
+         , Quarterly_Profit_delta = Quarterly_Profit - Quarterly_Profit_cluster_mean
+         , Quarterly_COGS_delta = Quarterly_COGS - Quarterly_COGS_cluster_mean
+         , Quarterly_count_of_trxs_delta = Quarterly_count_of_trxs - Quarterly_count_of_trxs_cluster_mean
+         , Quarterly_returns_delta = Quarterly_returns - Quarterly_returns_cluster_mean
+         , Quarterly_Volume_yoy_delta = Quarterly_Volume_yoy - Quarterly_Volume_yoy_cluster_mean
+         , Quarterly_Revenue_yoy_delta = Quarterly_Revenue_yoy - Quarterly_Revenue_yoy_cluster_mean
+         , Quarterly_Profit_yoy_delta = Quarterly_Profit_yoy - Quarterly_Profit_yoy_cluster_mean
+         , Quarterly_COGS_yoy_delta  = Quarterly_Profit_yoy - Quarterly_Profit_yoy_cluster_mean
+         , Quarterly_count_of_trxs_yoy_delta = Quarterly_count_of_trxs_yoy - Quarterly_count_of_trxs_yoy_cluster_mean
+         , Quarterly_returns_yoy_delta = Quarterly_returns_yoy - Quarterly_returns_yoy_cluster_mean
+         , `Percent Q1_delta` = `Percent Q1` - `Percent Q1_cluster_mean`
+         , `Percent Q2_delta` = `Percent Q2` - `Percent Q2_cluster_mean`
+         , `Percent Q3_delta` = `Percent Q3` - `Percent Q3_cluster_mean`
+         , `Percent Q4_delta` = `Percent Q4` - `Percent Q2_cluster_mean`
+  )
+```
+
+Can we increase Quarterly_Profit of individual customers? Which customers can be adjusted up?
+
+Top customers below cluster mean
+
+```{r}
+cluster_delta %>% filter(Quarterly_Profit>0) %>%  top_n(10, desc(Quarterly_Profit_delta)) %>% select(Customer, "Average Quarterly Profit" = Quarterly_Profit, Quarterly_Profit_cluster_mean, Quarterly_Profit_delta) %>% toClip()
+
+
+cluster_delta %>% filter(Quarterly_Profit>0) %>%  top_n(10, desc(Quarterly_Profit_delta)) %>% select(Customer, "Average Quarterly Profit" = Quarterly_Profit, Quarterly_Profit_cluster_mean, Quarterly_Profit_delta) 
+```
+
+
+Revenue and costs adjustment for under-performing Customers
+
+```{r}
+
+customer_revenue_adjust <- 
+  cluster_delta %>% 
+  select(Customer, Quarterly_Revenue, Quarterly_Revenue_delta) %>% 
+  filter(Quarterly_Revenue>0) %>% 
+  filter(Quarterly_Revenue_delta<0) %>% 
+  mutate(Revenue_adjust_10 = 0.1
+         ,Revenue_adjust_25 = 0.25
+         ,Revenue_adjust_50 = 0.50)
+
+customer_cost_adjust <- 
+  cluster_delta %>% 
+  select(Customer, Quarterly_COGS, Quarterly_COGS_delta) %>% 
+  filter(Quarterly_COGS_delta>0) %>% 
+  mutate(Cost_adjust_10 = 0.1
+         , Cost_adjust_25 = 0.25
+         , Cost_adjust_50 = 0.50)
+
+
+```
+
+
+
+```{r fig.height=10, fig.width=15}
+trxs_joined_revenue_adjustments <- left_join(trxs_joined, customer_revenue_adjust, by = "Customer")
+
+trxs_joined_revenue_adjustments %>% 
+  mutate(Revenue = Sales*`Quantity, units`) %>% 
+  mutate_at(vars(Revenue_adjust_10:Revenue_adjust_50), funs(replace_na)) %>% 
+  mutate(Revenue_add_10 = Revenue+(Revenue_adjust_10*Revenue)
+         , Revenue_add_25 = Revenue+(Revenue_adjust_25*Revenue)
+         , Revenue_add_50 = Revenue+(Revenue_adjust_50*Revenue)
+         ) %>% 
+  group_by(FiscalYear) %>% 
+  summarise(Revenue = sum(Revenue, na.rm = T)
+            , Revenue_add_10 = sum(Revenue_add_10, na.rm = T)
+            , Revenue_add_25 = sum(Revenue_add_25, na.rm = T)
+            , Revenue_add_50 = sum(Revenue_add_50, na.rm = T)
+            ) %>% 
+  filter(!is.na(FiscalYear)) %>% 
+  gather(Var, Value, -FiscalYear) %>% 
+  ggplot()+
+  aes(x = FiscalYear, y = Value, fill = Var, group = Var)+
+  geom_col(position = "dodge")+
+  theme_bw()+
+  scale_y_continuous(labels = scales::comma)+
+  labs(title = "Revenue Headroom Sensitivity Analysis"
+       , x = NULL
+       , y = "Revenue"
+       , fill = "Scenario")
+```
+
+
+
+```{r fig.height=10, fig.width=15}
+trxs_joined_cost_adjustments <- left_join(trxs_joined, customer_cost_adjust, by = "Customer")
+
+trxs_joined_cost_adjustments %>% 
+  mutate(COGS = `Part cost, $`*`Quantity, units`) %>% 
+  mutate_at(vars(Cost_adjust_10:Cost_adjust_50), funs(replace_na)) %>% 
+  mutate(Cost_add_10 = COGS-(Cost_adjust_10*COGS)
+         , Cost_add_25 = COGS-(Cost_adjust_25*COGS)
+         , Cost_add_50 = COGS-(Cost_adjust_50*COGS)
+         ) %>% 
+  group_by(FiscalYear) %>% 
+  summarise(COGS = sum(COGS, na.rm = T)
+            , Cost_less_10 = sum(Cost_add_10, na.rm = T)
+            , Cost_less_25 = sum(Cost_add_25, na.rm = T)
+            , Cost_less_50 = sum(Cost_add_50, na.rm = T)
+            ) %>% 
+  filter(!is.na(FiscalYear)) %>% 
+  gather(Var, Value, -FiscalYear) %>% 
+  ggplot()+
+  aes(x = FiscalYear, y = Value, fill = Var, group = Var)+
+  geom_col(position = "dodge")+
+  theme_bw()+
+  scale_y_continuous(labels = scales::comma)+
+  labs(title = "COGS Headroom Sensitivity Analysis"
+       , x = NULL
+       , y = "COGS"
+       , fill = "Scenario")
+```
+
+
+
+
+
+
+
+
+
+
 
 
 
