@@ -3,7 +3,7 @@ title: "Transactions Clustering"
 output: github_document
 ---
 
-
+Document options:
 
 ```{r setup}
 knitr::opts_chunk$set(
