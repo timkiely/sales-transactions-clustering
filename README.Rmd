@@ -3,6 +3,31 @@ title: "Transactions Clustering"
 output: github_document
 ---
 
+# Intro
+
+## Objective:
+Either:
+A) Encourage the fund to invest in this component manufacteruer
+B) Highlight risks and steet company away
+
+## Questions:
+- What are potential risks that would steer company away?
+  - Customer attrition?
+  - Very few customers making up large percentage of purchases (i.e., fragile)
+  - 
+- Potential Upside?
+ - Is there significant $ headroom?
+  - Reduce Costs?
+  - Increase Revenues?
+
+## Method:
+
+Explore the customer base. Mgmt has classified customers by end market, however, these classifications may be too broad and they may obscure important information. Since the customers are manufactuers who then sell their products to other markets, there is likely a wide variety of customer end-behavior to be explored. 
+
+
+
+# R Code
+
 Document options:
 
 ```{r setup}
@@ -13,7 +38,7 @@ knitr::opts_chunk$set(
 )
 ```
 
-# Setup
+## Setup
 
 Libraries and data import.
 
@@ -27,6 +52,33 @@ suppressPackageStartupMessages(
 
 Load the data
 ```{r}
-
+catalog <- read_csv("data/Data set A.csv")
+transactions <- read_csv("data/Data set B.csv")
 ```
+
+
+## EDA & Tidy
+
+```{r}
+summary(glimpse(catalog))
+```
+
+```{r}
+summary(glimpse(transactions))
+```
+
+
+```{r}
+catalog_clean <- catalog %>% 
+  mutate(Sales = as.numeric(`Sales, $`)) 
+
+trxs_clean <- transactions
+```
+
+
+
+
+
+
+
 
