@@ -1,0 +1,23 @@
+---
+title: "Transactions Clustering"
+output: github_document
+---
+
+
+# 0) Setup
+Libraries, kntir and pandoc options, and data import.
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+	echo = TRUE,
+	message = FALSE,
+	warning = FALSE
+)
+library(tidyverse)
+```
+
+Load the data
+```{r}
+
+```
+
