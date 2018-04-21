@@ -6,19 +6,46 @@ output: github_document
 # Intro
 
 ## Objective:
+
 Either:
-A) Encourage the fund to invest in this component manufacteruer
-B) Highlight risks and steet company away
+
+1) Encourage the fund to invest in this component manufacteruer
+2) Highlight risks and steet company away
 
 ## Questions:
+
 - What are potential risks that would steer company away?
-  - Customer attrition?
-  - Very few customers making up large percentage of purchases (i.e., fragile)
-  - 
+    - Customer attrition?
+    - Very few customers making up large percentage of purchases (i.e., fragile)
+    -
+
+
 - Potential Upside?
- - Is there significant $ headroom?
-  - Reduce Costs?
-  - Increase Revenues?
+    - Is there significant $ headroom?
+      - Reduce Costs?
+        - Is there an optimization solution here in terms of cost of sales?
+      - Increase Revenues?
+        - Unique characteristics include: components supplied are mission-critical and much cheaper than the final product which is assembled and sold by the customer. 
+        - Why are the components priced so low compared to the final products?
+        - Price driven down by competition rather than margins?
+        - Key player in industry, many times larger than competitors. Customers are locked-in by regulations, highly specialized products. 
+        - Increase cross-selling? 
+      
+
+## Key Questions (from document)
+
+1) Are there distinct customer segments, separate from the end market classifications that have been assigned by the management team?
+2) Inform how we should be thinking about any of the following potential value creation drivers:
+    - driving profit by increasing pricing
+    - consolidating plant footprint
+    - improving how the company purchases raw materials
+    - etc.?
+3) If the data raises additional questions or there are additional opportunities for insight, but you would require 
+  1) additional company data
+  2) external third‐party data, or 
+  3) a conversation with management
+
+please highlight your proposed analyses, their objectives, how they can help influence our decision‐making, and how you would execute them. 
 
 ## Method:
 
@@ -26,7 +53,7 @@ Explore the customer base. Mgmt has classified customers by end market, however,
 
 
 
-# R Code
+# Analysis
 
 Document options:
 
@@ -52,28 +79,109 @@ suppressPackageStartupMessages(
 
 Load the data
 ```{r}
-catalog <- read_csv("data/Data set A.csv")
-transactions <- read_csv("data/Data set B.csv")
+transactions <- read_csv("data/Data set A.csv")
+customers <- read_csv("data/Data set B.csv")
 ```
 
 
 ## EDA & Tidy
 
 ```{r}
-summary(glimpse(catalog))
-```
-
-```{r}
 summary(glimpse(transactions))
 ```
 
+```{r}
+summary(glimpse(customers))
+```
+
+
+Clean data and join the customer segments to the transactions data, for comparrison. The existing customer "Markets" will form the BAU to compare against our new segmentation.
+```{r}
+trxs_clean <- transactions %>% 
+  mutate(Sales = as.numeric(`Sales, $`)) 
+```
+
+
+Any customers have more than 1 market? 65 Customers have >1 Market
 
 ```{r}
-catalog_clean <- catalog %>% 
-  mutate(Sales = as.numeric(`Sales, $`)) 
-
-trxs_clean <- transactions
+customers %>% 
+  group_by(Customer) %>% 
+  count() %>% 
+  arrange(-n) %>% 
+  group_by(n) %>% 
+  count(n)
 ```
+
+Solution: Create "market A" and "market B" variables. 
+
+```{r}
+customer_doubles <- customers %>% 
+  group_by(Customer) %>% 
+  mutate(total_market_segments = n()) %>% 
+  filter(total_market_segments>1) %>% 
+  arrange(Customer) %>% 
+  mutate(market_count = 1
+         , market_count_cumsum = cumsum(market_count)) %>% 
+  select(-market_count, -total_market_segments) %>% 
+  spread(market_count_cumsum, `End market`) %>% 
+  rename("Market A" = `1`, "Market B" = `2`)
+
+customers_clean <- customers %>% 
+  anti_join(customer_doubles, by = "Customer") %>% 
+  rename("Market A" = `End market`) %>% 
+  bind_rows(customer_doubles)
+
+
+# check the row sums:  
+nrow(customers_clean) == length(unique(customers$Customer))
+
+glimpse(customers_clean)
+```
+
+
+Join clean customer data to transaction data
+```{r}
+trxs_joined <- left_join(trxs_clean, customers_clean, by = "Customer")
+
+# check row sums: 
+nrow(trxs_joined)==nrow(trxs_clean)
+summary(glimpse(trxs_joined))
+```
+
+## EDA of customer profile
+
+The amount of transations per customer is skewed. a handful of cusotmers have upwards of 4K transactions. Median number of transactions is 4 over a 3 year period (2015-2017). 
+```{r}
+trxs_joined %>% 
+  group_by(Customer) %>% 
+  summarise(count = n()) %>% 
+  summary()
+
+trxs_joined %>% 
+  group_by(Customer) %>% 
+  summarise(count = n()) %>% 
+  ggplot()+
+  aes(x = count)+
+  geom_histogram()
+```
+
+
+```{r}
+trxs_joined %>% 
+  group_by(Customer) %>% 
+  summarise(count = n()) %>% 
+  summary()
+
+trxs_joined %>% 
+  group_by(Customer) %>% 
+  summarise(count = n()) %>% 
+  ggplot()+
+  aes(x = count)+
+  geom_histogram()
+```
+
+## Creating a customer-profile and clustering
 
 
 

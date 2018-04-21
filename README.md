@@ -7,18 +7,45 @@ Intro
 Objective:
 ----------
 
-Either: A) Encourage the fund to invest in this component manufacteruer B) Highlight risks and steet company away
+Either:
+
+1.  Encourage the fund to invest in this component manufacteruer
+2.  Highlight risks and steet company away
 
 Questions:
 ----------
 
 -   What are potential risks that would steer company away?
--   Customer attrition?
--   Very few customers making up large percentage of purchases (i.e., fragile)
--   -   Potential Upside?
--   Is there significant $ headroom?
--   Reduce Costs?
--   Increase Revenues?
+    -   Customer attrition?
+    -   Very few customers making up large percentage of purchases (i.e., fragile)
+    -   
+
+-   Potential Upside?
+    -   Is there significant $ headroom?
+    -   Reduce Costs?
+        -   Is there an optimization solution here in terms of cost of sales?
+    -   Increase Revenues?
+        -   Unique characteristics include: components supplied are mission-critical and much cheaper than the final product which is assembled and sold by the customer.
+        -   Why are the components priced so low compared to the final products?
+        -   Price driven down by competition rather than margins?
+        -   Key player in industry, many times larger than competitors. Customers are locked-in by regulations, highly specialized products.
+        -   Increase cross-selling?
+
+Key Questions (from document)
+-----------------------------
+
+1.  Are there distinct customer segments, separate from the end market classifications that have been assigned by the management team?
+2.  Inform how we should be thinking about any of the following potential value creation drivers:
+    -   driving profit by increasing pricing
+    -   consolidating plant footprint
+    -   improving how the company purchases raw materials
+    -   etc.?
+3.  If the data raises additional questions or there are additional opportunities for insight, but you would require
+4.  additional company data
+5.  external third‐party data, or
+6.  a conversation with management
+
+please highlight your proposed analyses, their objectives, how they can help influence our decision‐making, and how you would execute them.
 
 Method:
 -------
