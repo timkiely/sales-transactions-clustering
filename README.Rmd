@@ -1,6 +1,11 @@
 ---
 title: "Transactions Clustering"
-output: github_document
+output:
+  github_document:
+    toc: true
+    toc_depth: 2
+    fig_width: 14
+    dev: jpeg
 ---
 
 # Intro

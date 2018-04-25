@@ -1,6 +1,21 @@
 Transactions Clustering
 ================
 
+-   [Intro](#intro)
+    -   [Objective:](#objective)
+    -   [Initial questions:](#initial-questions)
+    -   [Key Questions (from document)](#key-questions-from-document)
+    -   [Method:](#method)
+-   [Analysis](#analysis)
+    -   [Setup](#setup)
+    -   [EDA & Tidy](#eda-tidy)
+    -   [EDA of customer profile](#eda-of-customer-profile)
+    -   [Creating a customer-level-profile and clustering](#creating-a-customer-level-profile-and-clustering)
+    -   [Choosing the best clustering parameters](#choosing-the-best-clustering-parameters)
+    -   [Using KMEANS and K=10 to cluster](#using-kmeans-and-k10-to-cluster)
+    -   [Examine original groups. Calculate potential headroom](#examine-original-groups.-calculate-potential-headroom)
+-   [Output](#output)
+
 Intro
 =====
 
@@ -300,7 +315,7 @@ trxs_joined %>%
   geom_histogram()
 ```
 
-![](README_files/figure-markdown_github/unnamed-chunk-9-1.png)
+![](README_files/figure-markdown_github/unnamed-chunk-9-1.jpeg)
 
 There are clear outliers inthe sales and costs amounts. Filtering out top 5% of trransactions.
 
@@ -313,7 +328,7 @@ trxs_joined %>%
   geom_histogram()
 ```
 
-![](README_files/figure-markdown_github/unnamed-chunk-10-1.png)
+![](README_files/figure-markdown_github/unnamed-chunk-10-1.jpeg)
 
 ``` r
 trxs_joined <- 
@@ -608,7 +623,7 @@ plot_sse %>%
   scale_x_continuous(breaks = 2:25)
 ```
 
-![](README_files/figure-markdown_github/unnamed-chunk-15-1.png)
+![](README_files/figure-markdown_github/unnamed-chunk-15-1.jpeg)
 
 What family to use? Minimal within-cluster distance is best. Based on within-cluster criteria, kmeans is best choice.
 
@@ -786,7 +801,7 @@ cluster_groups <-
 cluster_groups
 ```
 
-![](README_files/figure-markdown_github/Cluster%20Behavior-1.png)
+![](README_files/figure-markdown_github/Cluster%20Behavior-1.jpeg)
 
 ``` r
 market_order <- 
@@ -853,7 +868,7 @@ end_market_groups <-
 end_market_groups
 ```
 
-![](README_files/figure-markdown_github/End%20Market%20Behavior-1.png)
+![](README_files/figure-markdown_github/End%20Market%20Behavior-1.jpeg)
 
 Examine original groups. Calculate potential headroom
 -----------------------------------------------------
@@ -1029,7 +1044,7 @@ revenue_headroom_barchart <-
 revenue_headroom_barchart
 ```
 
-![](README_files/figure-markdown_github/Revenue%20Headroom-1.png)
+![](README_files/figure-markdown_github/Revenue%20Headroom-1.jpeg)
 
 ``` r
 trxs_joined_cost_adjustments <- left_join(trxs_joined, customer_cost_adjust, by = "Customer")
@@ -1081,7 +1096,7 @@ cogs_headroom_barchart <-
 cogs_headroom_barchart
 ```
 
-![](README_files/figure-markdown_github/COGS-1.png)
+![](README_files/figure-markdown_github/COGS-1.jpeg)
 
 Output
 ======
@@ -1093,8 +1108,8 @@ cluster_groups
 dev.off()
 ```
 
-    ## quartz_off_screen 
-    ##                 2
+    ## pdf 
+    ##   2
 
 ``` r
 # end market groups:
@@ -1103,8 +1118,8 @@ end_market_groups
 dev.off()
 ```
 
-    ## quartz_off_screen 
-    ##                 2
+    ## pdf 
+    ##   2
 
 ``` r
 # top 10 customers by profit delta:
@@ -1126,8 +1141,8 @@ revenue_headroom_barchart
 dev.off()
 ```
 
-    ## quartz_off_screen 
-    ##                 2
+    ## pdf 
+    ##   2
 
 ``` r
 # revenue headroom data:
@@ -1157,8 +1172,8 @@ cogs_headroom_barchart
 dev.off()
 ```
 
-    ## quartz_off_screen 
-    ##                 2
+    ## pdf 
+    ##   2
 
 ``` r
 # COGS headroom data:
