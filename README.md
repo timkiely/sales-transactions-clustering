@@ -300,7 +300,7 @@ trxs_joined %>%
   geom_histogram()
 ```
 
-![](README_files/figure-markdown_github-ascii_identifiers/unnamed-chunk-9-1.png)
+![](README_files/figure-markdown_github/unnamed-chunk-9-1.png)
 
 There are clear outliers inthe sales and costs amounts. Filtering out top 5% of trransactions.
 
@@ -313,15 +313,14 @@ trxs_joined %>%
   geom_histogram()
 ```
 
-![](README_files/figure-markdown_github-ascii_identifiers/unnamed-chunk-10-1.png)
+![](README_files/figure-markdown_github/unnamed-chunk-10-1.png)
 
 ``` r
 trxs_joined <- 
   trxs_joined %>% 
   mutate(Sales_percentile = ntile(Sales, 20)) %>% 
   mutate(Cost_percentile = ntile(`Part cost, $`, 20)) %>% 
-  filter(Sales_percentile<20, Sales_percentile
-         , Cost_percentile < 20, Cost_percentile > 1) 
+  filter(Sales_percentile<20, Cost_percentile < 20, Cost_percentile > 1) 
 
 summary(trxs_joined)
 ```
@@ -362,7 +361,17 @@ summary(trxs_joined)
 Creating a customer-level-profile and clustering
 ------------------------------------------------
 
-What are the dimensions we are interested in? - Revenues (Qty\*Sales) - Cost of goods sold - How many returns are we making? (Negative sales) - Net Sales (Revenues - COGS) - Total Volume - Seasonality? - Different number of parts? - Multiple Parts per Order? - Order growth QoQ?
+What are the dimensions we are interested in?
+
+-   Revenues (Sales)
+-   Cost of goods sold
+-   How many returns are we making? (Negative sales)
+-   Net Sales (Revenues - COGS)
+-   Total Volume
+-   Seasonality?
+-   Different number of parts?
+-   Multiple Parts per Order?
+-   Order growth QoQ?
 
 ``` r
 # QUESTION: ARE SALES AND COST FIGURES UNIT PRICES? OR TOTALS?
@@ -420,14 +429,15 @@ glimpse(trxs_features)
 # ensures that all quarters a represented (for YoY calculation)
 all_quarters <- data_frame(FiscalQuarter = 1:4)
 
+# computes lag from 4 quarters ago (1 year)
 lag_1_year <- function(x) lag(x,4)
 
-# function computes YoY
+# computes YoY
 Quarterly_YoY <- function(x) {
   y <- (x - lag(x,4))
 }
 
-
+# computes % YoY
 Percent_YoY <- function(x) {
   y <- x/lag(x,4)
   }
@@ -441,7 +451,7 @@ replace_inf <- function(x) ifelse(is.infinite(x), 0, x)
 
 customer_quarterly_averages <- trxs_features %>% 
   arrange(Customer) %>% 
-  #filter(Customer %in% c("Customer 1", "Customer 2")) %>% 
+  #filter(Customer %in% c("Customer 1", "Customer 2")) %>%  # dev purposes
   group_by(Customer, YearQuarter, FiscalQuarter) %>% 
   summarise(Quarterly_Volume = sum(`Quantity, units`, na.rm = T)
             , Quarterly_Revenue = sum(Revenue, na.rm = T)
@@ -502,7 +512,7 @@ cluster_data <- left_join(customer_quarterly_averages,  quarterly_buying_habits,
 Choosing the best clustering parameters
 ---------------------------------------
 
-Normalize data
+Normalize data by scaling
 
 ``` r
 data_for_scaling <- cluster_data %>% 
@@ -515,7 +525,7 @@ scaled_data <-  data_for_scaling %>%
   select_at(vars(Quarterly_Volume:`Percent Q4`))
 ```
 
-Using the elbow method, we find that around 15 clusters is optimal.
+Using the elbow method, we find that around 10 clusters is optimal.
 
 ``` r
 fc_cont <- new("flexclustControl")
@@ -598,7 +608,7 @@ plot_sse %>%
   scale_x_continuous(breaks = 2:25)
 ```
 
-![](README_files/figure-markdown_github-ascii_identifiers/unnamed-chunk-15-1.png)
+![](README_files/figure-markdown_github/unnamed-chunk-15-1.png)
 
 What family to use? Minimal within-cluster distance is best. Based on within-cluster criteria, kmeans is best choice.
 
@@ -625,7 +635,7 @@ test_kmeans <- cclust(cluster_data_test
                       , save.data=TRUE)
 
 test_kmedians <- kcca(cluster_data_test
-                      , k = number_clusters
+                      , k = num_clusters
                       , save.data = TRUE
                       , control = fc_cont
                       , family = kccaFamily("kmedians")
@@ -691,39 +701,24 @@ summary(test_kmedians)
     ## kcca object of family 'kmedians' 
     ## 
     ## call:
-    ## kcca(x = cluster_data_test, k = number_clusters, family = kccaFamily("kmedians"), 
+    ## kcca(x = cluster_data_test, k = num_clusters, family = kccaFamily("kmedians"), 
     ##     control = fc_cont, save.data = TRUE)
     ## 
     ## cluster info:
-    ##    size    av_dist   max_dist separation
-    ## 1    66  3.3666242  22.609552 4.64163941
-    ## 2   163  0.9781433   9.933181 0.69253357
-    ## 3   153  1.6252385   7.234542 1.08345611
-    ## 4   171  0.8939149   3.580637 0.75151580
-    ## 5   305  1.0222458   5.795198 0.73641555
-    ## 6    69  0.4822308   4.752536 0.13281748
-    ## 7   123  0.6116493   9.431381 0.18743600
-    ## 8    47  0.8175978  11.116056 0.19753939
-    ## 9   586  0.1861120  11.491774 0.07628493
-    ## 10  103  0.3568431   8.273602 0.07483986
-    ## 11  299  0.1213118   1.792023 0.02431208
-    ## 12   15 20.0740331  85.589245 8.16801849
-    ## 13  239  2.6108691 135.334933 0.93750057
-    ## 14  183  0.5035526  47.197364 0.01659765
-    ## 15  597  0.2913822   7.894951 0.72528735
-    ## 16  143  0.3776699   3.846041 0.16942773
-    ## 17  100  6.3189381  76.842004 2.45578810
-    ## 18  144  0.8984799   7.639637 0.86545794
-    ## 19  178  0.8519256   5.839650 0.76012361
-    ## 20  280  0.6951758   3.248266 0.65351321
-    ## 21  227  0.3074527  13.687089 0.08094255
-    ## 22  222  2.7044846  16.764177 1.12793720
-    ## 23  167  0.2531555   3.834844 0.04269665
-    ## 24  390  0.3841370  61.917292 0.17312999
-    ## 25  109  0.3904709  13.157587 0.06176901
+    ##    size   av_dist   max_dist separation
+    ## 1    69 3.9842922  31.482667  4.2641228
+    ## 2   563 0.4721148  61.945854  0.9444514
+    ## 3   468 2.5589526 135.513779  0.8616618
+    ## 4   424 1.1891329   5.718159  0.8534705
+    ## 5   352 4.6040663  98.371196  1.6012281
+    ## 6   320 1.1024312   5.782994  0.7455445
+    ## 7   335 0.9062349   4.932218  0.6552478
+    ## 8   611 0.3304289  10.405900  0.7339944
+    ## 9   948 0.3489505  13.787817  0.6419965
+    ## 10  989 0.4254654  47.252809  0.7021894
     ## 
-    ## no convergence after 50 iterations
-    ## sum of within cluster distances: 4681.589
+    ## convergence after 21 iterations
+    ## sum of within cluster distances: 5472.979
 
 Using KMEANS and K=10 to cluster
 --------------------------------
@@ -791,7 +786,7 @@ cluster_groups <-
 cluster_groups
 ```
 
-![](README_files/figure-markdown_github-ascii_identifiers/Cluster%20Behavior-1.png)
+![](README_files/figure-markdown_github/Cluster%20Behavior-1.png)
 
 ``` r
 market_order <- 
@@ -815,22 +810,22 @@ cluster_data_groups %>%
     ## # A tibble: 15 x 2
     ## # Groups:   End market [15]
     ##    `End market`     n
-    ##          <fctr> <int>
-    ##  1     Market 1 25101
-    ##  2     Market 2    47
-    ##  3     Market 3    34
-    ##  4     Market 4   123
-    ##  5     Market 5    31
-    ##  6     Market 6    37
-    ##  7     Market 7     7
-    ##  8     Market 8    14
-    ##  9     Market 9     4
-    ## 10    Market 10    11
-    ## 11    Market 11    27
-    ## 12    Market 12    10
-    ## 13    Market 13     4
-    ## 14    Market 14     2
-    ## 15    Market 15     9
+    ##    <fct>        <int>
+    ##  1 Market 1     25101
+    ##  2 Market 2        47
+    ##  3 Market 3        34
+    ##  4 Market 4       123
+    ##  5 Market 5        31
+    ##  6 Market 6        37
+    ##  7 Market 7         7
+    ##  8 Market 8        14
+    ##  9 Market 9         4
+    ## 10 Market 10       11
+    ## 11 Market 11       27
+    ## 12 Market 12       10
+    ## 13 Market 13        4
+    ## 14 Market 14        2
+    ## 15 Market 15        9
 
 ``` r
 end_market_groups <- 
@@ -853,12 +848,12 @@ end_market_groups <-
   labs(title = "Scaled values by End Market group"
        , y = NULL
        , x = NULL 
-       , fill = "Normalized average")
+       , fill = "Normalized average \n (z-score)")
 
 end_market_groups
 ```
 
-![](README_files/figure-markdown_github-ascii_identifiers/End%20Market%20Behavior-1.png)
+![](README_files/figure-markdown_github/End%20Market%20Behavior-1.png)
 
 Examine original groups. Calculate potential headroom
 -----------------------------------------------------
@@ -868,6 +863,7 @@ If you can move X% of customers to cluster mean, net profit would be Y.
 ``` r
 cluster_mean <- function(x) mean(x, na.rm = T)
 cluster_identity <- function(x) sum(x, na.rm = T)
+
 cluster_averages <- cluster_data_groups %>% 
   group_by(clusters) %>% 
   summarise_at(vars(Quarterly_Volume:`Percent Q4`), funs(cluster_mean, cluster_identity)) %>% 
@@ -949,19 +945,18 @@ cluster_delta %>% filter(Quarterly_Profit>0) %>%  top_n(10, desc(Quarterly_Profi
 ```
 
     ## # A tibble: 10 x 4
-    ##          Customer `Average Quarterly Profit` Quarterly_Profit_cluster_mean
-    ##             <chr>                      <dbl>                         <dbl>
-    ##  1 Customer 10569                    19.5840                      433.0211
-    ##  2 Customer 11669                    40.4238                      361.4551
-    ##  3   Customer 126                 13422.2230                    20594.9329
-    ##  4 Customer 12692                    69.6540                      361.4551
-    ##  5 Customer 21670                 18175.3371                    20594.9329
-    ##  6   Customer 243                 13192.4772                    20594.9329
-    ##  7  Customer 6108                    99.8832                      361.4551
-    ##  8  Customer 6118                    51.0342                      361.4551
-    ##  9    Customer 76                 20255.6220                    20594.9329
-    ## 10  Customer 8197                   168.6619                      361.4551
-    ## # ... with 1 more variables: Quarterly_Profit_delta <dbl>
+    ##    Customer       `Average Quarterly… Quarterly_Profit_… Quarterly_Profit…
+    ##    <chr>                        <dbl>              <dbl>             <dbl>
+    ##  1 Customer 10569                19.6                433             - 413
+    ##  2 Customer 11669                40.4                361             - 321
+    ##  3 Customer 126               13422                20595             -7173
+    ##  4 Customer 12692                69.7                361             - 292
+    ##  5 Customer 21670             18175                20595             -2420
+    ##  6 Customer 243               13192                20595             -7402
+    ##  7 Customer 6108                 99.9                361             - 262
+    ##  8 Customer 6118                 51.0                361             - 310
+    ##  9 Customer 76                20256                20595             - 339
+    ## 10 Customer 8197                169                  361             - 193
 
 Revenue and costs adjustment for under-performing Customers
 
@@ -1030,7 +1025,11 @@ revenue_headroom_barchart <-
        , x = NULL
        , y = "Revenue"
        , fill = "Scenario")
+
+revenue_headroom_barchart
 ```
+
+![](README_files/figure-markdown_github/Revenue%20Headroom-1.png)
 
 ``` r
 trxs_joined_cost_adjustments <- left_join(trxs_joined, customer_cost_adjust, by = "Customer")
@@ -1082,7 +1081,7 @@ cogs_headroom_barchart <-
 cogs_headroom_barchart
 ```
 
-![](README_files/figure-markdown_github-ascii_identifiers/COGS-1.png)
+![](README_files/figure-markdown_github/COGS-1.png)
 
 Output
 ======

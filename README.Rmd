@@ -187,8 +187,7 @@ trxs_joined <-
   trxs_joined %>% 
   mutate(Sales_percentile = ntile(Sales, 20)) %>% 
   mutate(Cost_percentile = ntile(`Part cost, $`, 20)) %>% 
-  filter(Sales_percentile<20, Sales_percentile
-         , Cost_percentile < 20, Cost_percentile > 1) 
+  filter(Sales_percentile<20, Cost_percentile < 20, Cost_percentile > 1) 
 
 summary(trxs_joined)
 ```
@@ -197,7 +196,8 @@ summary(trxs_joined)
 ## Creating a customer-level-profile and clustering
 
 What are the dimensions we are interested in?
-- Revenues (Qty*Sales)
+
+- Revenues (Sales)
 - Cost of goods sold
 - How many returns are we making? (Negative sales)
 - Net Sales (Revenues - COGS)
@@ -241,14 +241,15 @@ glimpse(trxs_features)
 # ensures that all quarters a represented (for YoY calculation)
 all_quarters <- data_frame(FiscalQuarter = 1:4)
 
+# computes lag from 4 quarters ago (1 year)
 lag_1_year <- function(x) lag(x,4)
 
-# function computes YoY
+# computes YoY
 Quarterly_YoY <- function(x) {
   y <- (x - lag(x,4))
 }
 
-
+# computes % YoY
 Percent_YoY <- function(x) {
   y <- x/lag(x,4)
   }
@@ -262,7 +263,7 @@ replace_inf <- function(x) ifelse(is.infinite(x), 0, x)
 
 customer_quarterly_averages <- trxs_features %>% 
   arrange(Customer) %>% 
-  #filter(Customer %in% c("Customer 1", "Customer 2")) %>% 
+  #filter(Customer %in% c("Customer 1", "Customer 2")) %>%  # dev purposes
   group_by(Customer, YearQuarter, FiscalQuarter) %>% 
   summarise(Quarterly_Volume = sum(`Quantity, units`, na.rm = T)
             , Quarterly_Revenue = sum(Revenue, na.rm = T)
@@ -324,7 +325,8 @@ cluster_data <- left_join(customer_quarterly_averages,  quarterly_buying_habits,
 
 ## Choosing the best clustering parameters
 
-Normalize data
+Normalize data by scaling
+
 ```{r}
 data_for_scaling <- cluster_data %>% 
   ungroup() %>% 
@@ -337,7 +339,7 @@ scaled_data <-  data_for_scaling %>%
 
 ```
 
-Using the elbow method, we find that around 15 clusters is optimal. 
+Using the elbow method, we find that around 10 clusters is optimal. 
 
 ```{r}
 
@@ -422,7 +424,7 @@ test_kmeans <- cclust(cluster_data_test
                       , save.data=TRUE)
 
 test_kmedians <- kcca(cluster_data_test
-                      , k = number_clusters
+                      , k = num_clusters
                       , save.data = TRUE
                       , control = fc_cont
                       , family = kccaFamily("kmedians")
@@ -471,7 +473,7 @@ cluster_data_groups %>%
 ```
 
 
-```{r Cluster Behavior, fig.width=6}
+```{r Cluster Behavior, fig.width=14}
 cluster_groups <- 
   cluster_data_groups %>% 
   group_by(clusters) %>% 
@@ -517,7 +519,7 @@ cluster_data_groups %>%
 ```
 
 
-```{r End Market Behavior, fig.width=8}
+```{r End Market Behavior, fig.width=14}
 end_market_groups <- 
   cluster_data_groups %>% 
   left_join(customers, by = "Customer") %>% 
@@ -538,7 +540,7 @@ end_market_groups <-
   labs(title = "Scaled values by End Market group"
        , y = NULL
        , x = NULL 
-       , fill = "Normalized average")
+       , fill = "Normalized average \n (z-score)")
 
 end_market_groups
 ```
@@ -552,6 +554,7 @@ If you can move X% of customers to cluster mean, net profit would be Y.
 ```{r}
 cluster_mean <- function(x) mean(x, na.rm = T)
 cluster_identity <- function(x) sum(x, na.rm = T)
+
 cluster_averages <- cluster_data_groups %>% 
   group_by(clusters) %>% 
   summarise_at(vars(Quarterly_Volume:`Percent Q4`), funs(cluster_mean, cluster_identity)) %>% 
@@ -624,7 +627,7 @@ customer_cost_adjust <-
 
 
 
-```{r Revenue Headroom}
+```{r Revenue Headroom, fig.width=14}
 
 trxs_joined_revenue_adjustments <- left_join(trxs_joined, customer_revenue_adjust, by = "Customer")
 
@@ -671,11 +674,13 @@ revenue_headroom_barchart <-
        , x = NULL
        , y = "Revenue"
        , fill = "Scenario")
+
+revenue_headroom_barchart
 ```
 
 
 
-```{r COGS}
+```{r COGS, fig.width=14}
 trxs_joined_cost_adjustments <- left_join(trxs_joined, customer_cost_adjust, by = "Customer")
 
 trxs_joined_cost_adjustments %>% 
