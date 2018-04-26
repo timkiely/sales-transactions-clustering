@@ -79,7 +79,17 @@ suppressPackageStartupMessages({
   library(tidyverse)
   library(cluster)
   library(flexclust)
-  source("~/toClip.R") # quickly send data to clipboard on mac
+  
+  # quickly send data to clipboard (only works on mac)
+  toClip <- function(data, sep = '\t', row.names = FALSE){
+    clip <- pipe("pbcopy", "w")                       
+    write.table(data, file=clip, sep = sep, row.names = row.names)
+    close(clip)
+  }
+  
+  # names variables for nicer printing:
+  source("utils/rename_variables.R")
+  
 })
 ```
 
@@ -257,7 +267,7 @@ Quarterly_YoY <- function(x) {
 # computes % YoY
 Percent_YoY <- function(x) {
   y <- x/lag(x,4)
-  }
+}
 
 # makes naming and mutli-mutating easier
 identity <- function(x) x
@@ -478,13 +488,16 @@ cluster_data_groups %>%
 ```
 
 
-```{r Cluster Behavior, fig.width=14}
+```{r Cluster Behavior, fig.height=10, fig.width=14}
+
 cluster_groups <- 
   cluster_data_groups %>% 
   group_by(clusters) %>% 
   summarise_if(is.numeric, funs(mean),na.rm = T) %>% 
   mutate_at(vars(Quarterly_Volume:`Percent Q4`), funs(scale)) %>% 
-  #select(-YearQuarter, -FiscalQuarter) %>% 
+  
+  renames_clusters() %>% # found in utile/rename_variables.R
+  
   gather(Var, Value, -clusters) %>% 
   ggplot+
   aes(x = Var, y = Value, fill = Value)+
@@ -499,7 +512,18 @@ cluster_groups <-
        , fill = "Normalized average \n (z-score)")
 
 
+
+# colors for variable names
+colorpal <- c(
+              "darkgreen","darkgreen","darkgreen","darkgreen","darkgreen","darkgreen"
+              ,"blue","blue","blue","blue","blue","blue"
+              , "red","red","red","red"
+              )
+
+cluster_groups <- cluster_groups + theme(axis.text.y=element_text(colour=colorpal))
+
 cluster_groups
+
 ```
 
 
@@ -524,7 +548,7 @@ cluster_data_groups %>%
 ```
 
 
-```{r End Market Behavior, fig.width=14}
+```{r End Market Behavior, fig.height=10, fig.width=14}
 end_market_groups <- 
   cluster_data_groups %>% 
   left_join(customers, by = "Customer") %>% 
@@ -533,6 +557,7 @@ end_market_groups <-
   group_by(`End market`) %>% 
   summarise_if(is.numeric, funs(mean),na.rm = T) %>% 
   mutate_at(vars(Quarterly_Volume:`Percent Q4`), funs(scale)) %>% 
+  renames_clusters() %>% 
   select(-clusters) %>% 
   gather(Var, Value, -`End market`) %>% 
   ggplot+
@@ -542,10 +567,17 @@ end_market_groups <-
   coord_flip()+
   facet_wrap(~`End market`, nrow = 1)+
   theme_bw()+
-  labs(title = "Scaled values by End Market group"
+  labs(title = "Characteristics of End Market Groups"
        , y = NULL
        , x = NULL 
        , fill = "Normalized average \n (z-score)")
+
+colorpal <- c("darkgreen","darkgreen","darkgreen","darkgreen","darkgreen","darkgreen"
+              ,"blue","blue","blue","blue","blue","blue"
+              , "red","red","red","red"
+              )
+
+end_market_groups <- end_market_groups + theme(axis.text.y=element_text(colour=colorpal))
 
 end_market_groups
 ```
@@ -789,8 +821,6 @@ trxs_joined_revenue_adjustments %>%
 
 
 
-
-
 # COGS headroom barchart:
 jpeg(filename = "img/cogs-headroom-barchart.png", width = 10, height = 4, units = "in", res = 1000)
 cogs_headroom_barchart
@@ -813,7 +843,19 @@ trxs_joined_cost_adjustments %>%
   ) %>% 
   filter(!is.na(FiscalYear)) %>% toClip()
 
-
+# averages by cluster
+cluster_data_groups %>% 
+  group_by(clusters) %>% 
+  summarise_if(is.numeric, funs(mean), na.rm = T) %>% 
+  left_join(
+    cluster_data_groups %>% 
+      group_by(clusters) %>% 
+      summarise(count = n()) 
+    , by = "clusters"
+  ) %>% 
+  select(clusters, count, everything()) %>% 
+  renames_clusters() %>% # RENAMING VARIABLES FOR NICE PRINTING
+  t() %>% toClip(row.names = TRUE)
 
 ```
 
