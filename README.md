@@ -25,49 +25,45 @@ Objective:
 Either:
 
 1.  Encourage the fund to invest in this component manufacteruer
-2.  Highlight risks and steet company away
+2.  Highlight risks and steer company away
 
 Initial questions:
 ------------------
 
 -   What are potential risks that would steer company away?
--   Customer attrition?
--   Very few customers making up large percentage of purchases (i.e., fragile)
-
+    -   Customer attrition?
+    -   Very few customers making up large percentage of purchases (i.e., fragile)
 -   Potential Upside?
--   Is there significant $ headroom?
--   Reduce Costs?
--   Is there an optimization solution here in terms of cost of sales?
+    -   Is there significant $ headroom?
+    -   Reduce Costs?
+    -   Is there an optimization solution here in terms of cost of sales?
 -   Increase Revenues?
--   Unique characteristics include: components supplied are mission-critical and much cheaper than the final product which is assembled and sold by the customer.
--   Why are the components priced so low compared to the final products?
--   Price driven down by competition rather than margins?
--   Key player in industry, many times larger than competitors. Customers are locked-in by regulations, highly specialized products.
--   Increase cross-selling?
+    -   Unique characteristics include: components supplied are mission-critical and much cheaper than the final product which is assembled and sold by the customer.
+    -   Why are the components priced so low compared to the final products?
+    -   Price driven down by competition rather than margins?
+    -   Key player in industry, many times larger than competitors. Customers are locked-in by regulations, highly specialized products.
+    -   Increase cross-selling?
 
 Key Questions (from document)
 -----------------------------
 
 1.  Are there distinct customer segments, separate from the end market classifications that have been assigned by the management team?
 2.  Inform how we should be thinking about any of the following potential value creation drivers:
-
--   driving profit by increasing pricing
--   consolidating plant footprint
--   improving how the company purchases raw materials
--   etc.?
-
-1.  If the data raises additional questions or there are additional opportunities for insight, but you would require
-
--   additional company data
--   external third‐party data, or
--   a conversation with management
+    -   driving profit by increasing pricing
+    -   consolidating plant footprint
+    -   improving how the company purchases raw materials
+    -   etc.?
+3.  If the data raises additional questions or there are additional opportunities for insight, but you would require
+    -   additional company data
+    -   external third‐party data, or
+    -   a conversation with management
 
 please highlight your proposed analyses, their objectives, how they can help influence our decision‐making, and how you would execute them.
 
 Method:
 -------
 
-Explore the customer base. Mgmt has classified customers by end market, however, these classifications may be too broad and they may obscure important information. Since the customers are manufactuers who then sell their products to other markets, there is likely a wide variety of customer end-behavior to be explored.
+Explore the customer base. Mgmt has classified customers by end market, however, these classifications may be too broad and they may obscure important information. Since the customers are manufactuers who then sell their products to other markets, there is likely a wide variety of customer end-behavior to be explored. Cluster using a k-centroids method then compare new segments vs. BAU classification.
 
 Analysis
 ========
@@ -893,7 +889,7 @@ colorpal <- c("darkgreen","darkgreen","darkgreen","darkgreen","darkgreen","darkg
               , "red","red","red","red"
               )
 
-end_market_groups <- end_market_groups + theme(axis.text.y=element_text(colour=colorpal))
+end_market_groups <- end_market_groups + theme(axis.text.y = element_text(colour=colorpal), strip.text.x = element_text(size = 8, angle = 90))
 
 end_market_groups
 ```
@@ -1133,7 +1129,7 @@ Output
 
 ``` r
 # cluster groups:
-jpeg(filename = "img/cluster-groups.png", width = 10, height = 4, units = "in", res = 1000)
+jpeg(filename = "img/cluster-groups.png", width = 10, height = 6, units = "in", res = 1000)
 cluster_groups
 dev.off()
 ```
@@ -1143,7 +1139,7 @@ dev.off()
 
 ``` r
 # end market groups:
-jpeg(filename = "img/end-market-groups.png", width = 10, height = 4, units = "in", res = 1000)
+jpeg(filename = "img/end-market-groups.png", width = 10, height = 6, units = "in", res = 1000)
 end_market_groups
 dev.off()
 ```
