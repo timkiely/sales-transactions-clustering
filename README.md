@@ -3,8 +3,7 @@ Transactions Clustering
 
 -   [Intro](#intro)
     -   [Objective](#objective)
-    -   [Initial questions](#initial-questions)
-    -   [Key Questions (from document)](#key-questions-from-document)
+    -   [Key Questions](#key-questions-from-document)
     -   [Method:](#method)
 -   [Analysis](#analysis)
     -   [Setup](#setup)
@@ -18,6 +17,7 @@ Transactions Clustering
 
 Intro
 =====
+See "Findings.pdf" for final commentary. 
 
 Objective:
 ----------
