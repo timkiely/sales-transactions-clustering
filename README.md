@@ -2,8 +2,8 @@ Transactions Clustering
 ================
 
 -   [Intro](#intro)
-    -   [Objective:](#objective)
-    -   [Initial questions:](#initial-questions)
+    -   [Objective](#objective)
+    -   [Initial questions](#initial-questions)
     -   [Key Questions (from document)](#key-questions-from-document)
     -   [Method:](#method)
 -   [Analysis](#analysis)
@@ -27,24 +27,7 @@ Either:
 1.  Encourage the fund to invest in this component manufacteruer
 2.  Highlight risks and steer company away
 
-Initial questions:
-------------------
-
--   What are potential risks that would steer company away?
-    -   Customer attrition?
-    -   Very few customers making up large percentage of purchases (i.e., fragile)
--   Potential Upside?
-    -   Is there significant $ headroom?
-    -   Reduce Costs?
-    -   Is there an optimization solution here in terms of cost of sales?
--   Increase Revenues?
-    -   Unique characteristics include: components supplied are mission-critical and much cheaper than the final product which is assembled and sold by the customer.
-    -   Why are the components priced so low compared to the final products?
-    -   Price driven down by competition rather than margins?
-    -   Key player in industry, many times larger than competitors. Customers are locked-in by regulations, highly specialized products.
-    -   Increase cross-selling?
-
-Key Questions (from document)
+Key Questions
 -----------------------------
 
 1.  Are there distinct customer segments, separate from the end market classifications that have been assigned by the management team?
